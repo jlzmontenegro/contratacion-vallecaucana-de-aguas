@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contratación Vallecaucana de Aguas</title>
+<meta name="description" content="Dashboard interactivo de la contratación de Vallecaucana de Aguas S.A. E.S.P. (SECOP II), con énfasis en plantas de tratamiento de aguas residuales (PTAR).">
+<link rel="stylesheet" href="estilos-vallecaucana-de-aguas.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="cabecera">
+    <div>
+      <h1 id="h-entidad">Contratación — Vallecaucana de Aguas S.A. E.S.P.</h1>
+      <div class="sub">¿En qué se ha gastado la plata? · énfasis en plantas de tratamiento de aguas residuales (PTAR)</div>
+    </div>
+    <div class="meta" id="h-meta"></div>
+  </header>
+
+  <!-- Foco PTAR -->
+  <section class="card ptar" id="ptar-panel" aria-label="Contratación PTAR"></section>
+
+  <!-- KPIs -->
+  <section class="kpis" id="kpis" aria-label="Indicadores"></section>
+
+  <!-- Alertas de calidad de datos -->
+  <details class="alertas" id="alertas"></details>
+
+  <!-- Filtros -->
+  <section class="card filtros noprint" aria-label="Filtros">
+    <div class="fld f-q">
+      <label for="f-q">Buscar (objeto, proveedor, referencia, documento, supervisor, categoría)</label>
+      <input id="f-q" type="search" placeholder="Ej.: PTAR, interventoría, consorcio…" autocomplete="off">
+    </div>
+    <div class="fld f-rango">
+      <span class="lbl">Año de firma: <span class="rango-et" id="f-anios-et"></span></span>
+      <div class="rango">
+        <div class="pista"></div><div class="relleno" id="f-relleno"></div>
+        <input id="f-ymin" type="range" aria-label="Año inicial">
+        <input id="f-ymax" type="range" aria-label="Año final">
+      </div>
+    </div>
+    <div class="fld f-sel"><label for="f-cat">Categoría</label><select id="f-cat"></select></div>
+    <div class="fld f-sel"><label for="f-estado">Estado</label><select id="f-estado"></select></div>
+    <div class="fld f-sel"><label for="f-tipo">Tipo de contrato</label><select id="f-tipo"></select></div>
+    <div class="fld f-sel"><label for="f-modalidad">Modalidad</label><select id="f-modalidad"></select></div>
+    <div class="fld f-val"><label for="f-vmin">Valor mínimo (COP)</label><input id="f-vmin" type="text" inputmode="numeric" placeholder="0"></div>
+    <div class="fld f-val"><label for="f-vmax">Valor máximo (COP)</label><input id="f-vmax" type="text" inputmode="numeric" placeholder="sin tope"></div>
+    <div class="f-btns">
+      <label class="chk"><input type="checkbox" id="f-ptar"> Solo PTAR</label>
+      <div class="seg" role="group" aria-label="Medir por">
+        <button type="button" id="m-valor" aria-pressed="true">Valor</button>
+        <button type="button" id="m-n" aria-pressed="false">Nº contratos</button>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn" id="b-csv" type="button">⬇ CSV</button>
+      <button class="btn" id="b-pdf" type="button">🖨 PDF</button>
+      <button class="btn" id="b-limpiar" type="button">↺ Limpiar</button>
+    </div>
+  </section>
+
+  <div class="chips" id="chips" aria-live="polite"></div>
+
+  <!-- Gráficos -->
+  <section class="grid" aria-label="Gráficos">
+    <article class="card g-7">
+      <div class="card-h"><h2>¿En qué se ha gastado la plata? <small id="t-cat">valor por categoría</small></h2></div>
+      <div class="leyenda"><span><i style="background:var(--s1)"></i>Otros contratos</span><span><i style="background:var(--s2)"></i>Relacionados con PTAR</span></div>
+      <div class="barras" id="c-cat"></div>
+    </article>
+    <article class="card g-5">
+      <div class="card-h"><h2>Valor contratado por año</h2></div>
+      <div id="c-anio"></div>
+      <div class="pildoras" id="c-anio-pil"></div>
+    </article>
+    <article class="card g-7">
+      <div class="card-h"><h2>Top 12 proveedores <small id="t-prov">por valor</small></h2></div>
+      <div class="barras" id="c-prov"></div>
+    </article>
+    <article class="card g-5">
+      <div class="card-h"><h2>Estado</h2></div><div id="c-estado"></div>
+    </article>
+    <article class="card g-6">
+      <div class="card-h"><h2>Modalidad de contratación</h2></div><div id="c-modalidad"></div>
+    </article>
+    <article class="card g-6">
+      <div class="card-h"><h2>Tipo de contrato</h2></div><div id="c-tipo"></div>
+    </article>
+  </section>
+
+  <!-- Tabla -->
+  <section class="card" aria-label="Contratos">
+    <div class="card-h"><h2>Contratos <small id="t-tabla"></small></h2></div>
+    <div class="tabla-wrap"><table id="tabla"><thead></thead><tbody></tbody></table></div>
+    <div class="paginacion" id="pag"></div>
+  </section>
+
+  <!-- Metodología -->
+  <details class="card metodo" id="metodo" style="margin-top:12px">
+    <summary>Metodología de categorización y limpieza de datos</summary>
+    <div id="metodo-cuerpo"></div>
+  </details>
+
+  <p class="pie" id="pie"></p>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script src="datos-vallecaucana-de-aguas.js"></script>
+<script src="categorizar-vallecaucana-de-aguas.js"></script>
+<script src="app-vallecaucana-de-aguas.js"></script>
+</body>
+</html>
