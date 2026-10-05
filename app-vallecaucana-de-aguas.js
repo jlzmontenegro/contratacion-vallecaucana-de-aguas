@@ -46,6 +46,10 @@ function prepararDatos() {
     modalidad: d.modalidad || 'Sin modalidad',
     alerta: null,
   }));
+  for (const c of CONTRATOS) {                                // texto íntegro: el más largo entre objeto y descripción
+    if ((c.descripcion || '').length > c.objeto.length) c.objeto = c.descripcion;
+    c.recortado = c.objeto.length >= 499;                     // SECOP entrega el objeto cortado a 500 caracteres
+  }
   const anios = CONTRATOS.map((c) => c.anio).filter(Boolean);
   Y0 = Math.min(...anios); Y1 = Math.max(...anios);
   detectarOutliers();
@@ -306,7 +310,7 @@ function renderAlertas() {
   el.innerHTML = `<summary>⚠ Alertas de calidad de datos (${ALERTAS.length} contratos con valor atípico)</summary>
     <ul>
       ${ALERTAS.map((c) => `<li><b>${c.alerta.nivel === 'alta' ? 'Sospecha ALTA' : 'Atípico'}:</b> ${esc(c.ref)} · ${esc(c.proveedor)} · <b>${fmtCOP.format(c.valor)}</b> (${esc(c.estadoN)}, ${c.anio ?? 's/f'}).<br>${esc(c.alerta.motivo)}
-        <br><span class="nota" style="color:inherit">Objeto: ${esc(c.objeto.slice(0, 230))}${c.objeto.length > 230 ? '…' : ''}</span>
+        <br><span class="nota" style="color:inherit">Objeto: ${esc(c.objeto)}</span>
         ${c.url ? ` <a href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">Ver en SECOP 🔗</a>` : ''}</li>`).join('')}
       <li><b>No se corrigió ningún dato.</b> Las sospechas están documentadas aquí; confirma contra el expediente en SECOP antes de ajustar.</li>
       <li>${fmtN.format(cero.length)} contratos con valor $0 (${fmtN.format(ceroConv)} son convenios/interadministrativos, que se suscriben sin valor).</li>
@@ -348,7 +352,7 @@ function renderTabla(f) {
   $('#tabla tbody').innerHTML = filas.length ? filas.map((c) => `<tr>
     <td>${esc(c.ref)}</td>
     <td><span class="tag">${esc(c.cat)}</span>${c.ptar ? '<span class="badge-ptar" title="Relacionado con PTAR">PTAR</span>' : ''}</td>
-    <td class="objeto" data-act="expandir"><div title="${esc(c.objeto)}">${esc(c.objeto)}</div></td>
+    <td class="objeto"><div>${esc(c.objeto)}${c.recortado ? ' <span class="cortado" title="SECOP entrega este objeto cortado a 500 caracteres; el texto completo está en el enlace al proceso.">… (cortado por SECOP)</span>' : ''}</div></td>
     <td class="prov">${esc(c.proveedor)}<small>${esc(c.tipodoc)} ${esc(c.doc)}${c.pyme ? ' · <span class="pyme">PYME</span>' : ''}</small></td>
     <td class="num">${c.alerta ? `<span class="alerta-ico" title="${esc(c.alerta.motivo)}">⚠</span>` : ''}${fmtCOP.format(c.valor)}</td>
     <td><span class="est ${claseEstado(c.estadoN)}">${esc(c.estadoN)}</span></td>
@@ -452,7 +456,6 @@ document.addEventListener('click', (e) => {
     case 'ordenar': S.sort = { k: v, dir: S.sort.k === v ? -S.sort.dir : (v === 'valor' || v === 'firma' || v === 'anio' ? -1 : 1) }; S.pag = 1; render(); break;
     case 'pag': S.pag = +v; renderTabla(filtrar()); $('#tabla').scrollIntoView({ block: 'start', behavior: 'smooth' }); break;
     case 'quitar': quitarFiltro(v); break;
-    case 'expandir': t.classList.toggle('exp'); break;
   }
 });
 document.addEventListener('change', (e) => {

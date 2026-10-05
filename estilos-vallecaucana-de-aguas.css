@@ -174,9 +174,9 @@ th { position: sticky; top: 0; background: var(--surface-2); z-index: 1; cursor:
 th:hover { color: var(--accent); }
 th .flecha { color: var(--accent); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-td.objeto { min-width: 280px; max-width: 420px; }
-td.objeto div { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
-td.objeto.exp div { display: block; }
+td.objeto { min-width: 320px; max-width: 520px; }
+td.objeto div { white-space: normal; overflow-wrap: anywhere; }
+.cortado { color: var(--warn-ink); font-size: 11px; white-space: nowrap; cursor: help; }
 td.prov small { display: block; color: var(--ink-3); }
 .tag { display: inline-block; background: var(--accent-soft); color: var(--accent); border-radius: 6px; padding: 1px 7px; font-size: 11.5px; line-height: 1.5; }
 .badge-ptar { display: inline-block; background: var(--ptar); color: #fff; border-radius: 6px; padding: 0 6px; font-size: 10.5px; font-weight: 700; margin-left: 4px; }
@@ -239,7 +239,6 @@ textarea.src { width: 100%; height: 280px; font: 12px/1.4 ui-monospace, Consolas
   tr { break-inside: avoid; }
   details.metodo { display: block; }
   details.metodo > *:not(summary) { display: block; }
-  td.objeto div { display: block; -webkit-line-clamp: unset; }
   .barra .seg-a { background: var(--s1) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
