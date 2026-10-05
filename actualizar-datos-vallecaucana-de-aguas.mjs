@@ -18,6 +18,12 @@ for (let off = 0; ; off += PAGE) {
   if (lote.length < PAGE) break;
 }
 
+// Ajustes de valor verificados a mano contra el expediente en SECOP (la API abierta puede ir
+// rezagada respecto a modificaciones/adiciones). Se conserva el valor de la API en `valorApi`.
+const AJUSTES_VERIFICADOS = {
+  'CO1.PCCNTR.4166391': { valor: 45584659952, fecha: '2026-10-04', nota: 'Valor verificado en SECOP (2026-10-04).' }, // 2000.13.05.003-2022
+};
+
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const fecha = (v) => (v ? String(v).slice(0, 10) : '');
 const txt = (v) => (v == null ? '' : String(v).replace(/\s+/g, ' ').trim());
@@ -51,7 +57,10 @@ const datos = filas.map((r) => ({
   ordenador: txt(r.nombre_ordenador_del_gasto),
   url: r.urlproceso?.url || '',
   actualizado: fecha(r.ultima_actualizacion),
-}));
+})).map((d) => {
+  const aj = AJUSTES_VERIFICADOS[d.id];
+  return aj ? { ...d, valorApi: d.valor, valor: aj.valor, ajuste: aj.nota } : d;
+});
 
 const meta = {
   entidad: 'VALLECAUCANA DE AGUAS S.A. E.S.P',

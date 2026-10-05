@@ -28,7 +28,7 @@ let FUENTE_ORIGINAL = null;
 /* ---------- datos ---------- */
 let CONTRATOS = [];      // contratos válidos (sin Borrador/Cancelado)
 let EXCLUIDOS_N = { borrador: 0, cancelado: 0 };
-let ALERTAS = [];        // outliers por error de captura sospechado
+let ALERTAS = [];        // valores atípicos (sospecha de captura o verificados)
 let Y0 = 2021, Y1 = 2026;
 let COLORES = {};        // campo → Map(valor → color), estable ante filtros
 
@@ -77,7 +77,10 @@ function detectarOutliers() {
     const ord = [...lista].sort((a, b) => b.valor - a.valor);
     if (ord[0].valor >= 1e9 && ord[0].valor > 3 * ord[1].valor) {
       const c = ord[0];
-      c.alerta = {
+      c.alerta = c.ajuste ? {
+        nivel: 'verificado',
+        motivo: `Valor atípico VERIFICADO en SECOP: ${fmtCOP.format(c.valor)}. La API de datos abiertos reporta ${fmtCOP.format(c.valorApi)} (diferencia ${fmtCOP.format(c.valor - c.valorApi)}, probablemente una modificación aún no reflejada); el dashboard usa el valor verificado. No es un error de captura, pero es ${(c.valor / ord[1].valor).toLocaleString('es-CO', { maximumFractionDigits: 1 })}× el siguiente mayor contrato de tipo «${tipo}» y concentra ${pct(c.valor, total)} del valor total, por lo que domina los gráficos.`,
+      } : {
         nivel: 'alta',
         motivo: `Valor ${(c.valor / ord[1].valor).toLocaleString('es-CO', { maximumFractionDigits: 1 })}× el siguiente mayor contrato de tipo «${tipo}» (${fmtCOP.format(ord[1].valor)}) y concentra ${pct(c.valor, total)} del valor total. Posible error de captura (p. ej. cifras de más); verificar en SECOP.`,
       };
@@ -116,7 +119,7 @@ const estadoInicial = () => ({
 
 function pasa(c, omitir = []) {
   const o = (k) => omitir.includes(k);
-  if (S.sinOut && c.alerta && c.alerta.nivel === 'alta') return false;
+  if (S.sinOut && c.alerta && ['alta', 'verificado'].includes(c.alerta.nivel)) return false;
   if (!o('ptar') && S.ptar && !c.ptar) return false;
   if (!o('cat') && S.cat && c.cat !== S.cat) return false;
   if (!o('estado') && S.estado && c.estadoN !== S.estado) return false;
@@ -309,15 +312,15 @@ function renderAlertas() {
   el.dataset.init = '1';
   el.innerHTML = `<summary>⚠ Alertas de calidad de datos (${ALERTAS.length} contratos con valor atípico)</summary>
     <ul>
-      ${ALERTAS.map((c) => `<li><b>${c.alerta.nivel === 'alta' ? 'Sospecha ALTA' : 'Atípico'}:</b> ${esc(c.ref)} · ${esc(c.proveedor)} · <b>${fmtCOP.format(c.valor)}</b> (${esc(c.estadoN)}, ${c.anio ?? 's/f'}).<br>${esc(c.alerta.motivo)}
+      ${ALERTAS.map((c) => `<li><b>${c.alerta.nivel === 'alta' ? 'Sospecha ALTA' : c.alerta.nivel === 'verificado' ? 'Atípico verificado' : 'Atípico'}:</b> ${esc(c.ref)} · ${esc(c.proveedor)} · <b>${fmtCOP.format(c.valor)}</b> (${esc(c.estadoN)}, ${c.anio ?? 's/f'}).<br>${esc(c.alerta.motivo)}
         <br><span class="nota" style="color:inherit">Objeto: ${esc(c.objeto)}</span>
         ${c.url ? ` <a href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">Ver en SECOP 🔗</a>` : ''}</li>`).join('')}
-      <li><b>No se corrigió ningún dato.</b> Las sospechas están documentadas aquí; confirma contra el expediente en SECOP antes de ajustar.</li>
+      <li><b>No se corrige ningún dato sin confirmación.</b> La única excepción es el valor verificado en SECOP indicado arriba (ajuste documentado en <code>actualizar-datos-vallecaucana-de-aguas.mjs</code>). Las demás sospechas solo se señalan.</li>
       <li>${fmtN.format(cero.length)} contratos con valor $0 (${fmtN.format(ceroConv)} son convenios/interadministrativos, que se suscriben sin valor).</li>
       <li>${fmtN.format(sinFecha)} ${sinFecha === 1 ? 'contrato' : 'contratos'} sin fecha de firma (aún no firmados); se muestran con año «s/f» y solo cuentan cuando el rango de años está completo.</li>
       <li>${fmtN.format(genericos)} ${genericos === 1 ? 'contrato' : 'contratos'} con objeto genérico («No definido», «Sin descripción»): se clasifican con la justificación, el tipo y el segmento UNSPSC.</li>
     </ul>
-    <label><input type="checkbox" id="f-sinout" ${S.sinOut ? 'checked' : ''}> Excluir de todos los cálculos el contrato con sospecha ALTA (solo visualización; no altera los datos)</label>`;
+    <label><input type="checkbox" id="f-sinout" ${S.sinOut ? 'checked' : ''}> Excluir de todos los cálculos el contrato atípico de mayor valor (solo visualización; no altera los datos)</label>`;
   if (abierto) el.setAttribute('open', '');
 }
 
@@ -381,7 +384,7 @@ function renderChips() {
   if (S.vMin != null) ch.push(['vMin', 'Valor ≥ ' + fmtCOP.format(S.vMin)]);
   if (S.vMax != null) ch.push(['vMax', 'Valor ≤ ' + fmtCOP.format(S.vMax)]);
   if (S.ptar) ch.push(['ptar', 'Solo PTAR']);
-  if (S.sinOut) ch.push(['sinOut', 'Sin contrato con sospecha alta']);
+  if (S.sinOut) ch.push(['sinOut', 'Sin el contrato atípico de mayor valor']);
   $('#chips').innerHTML = ch.length
     ? '<span class="t">Filtros activos:</span>' + ch.map(([k, t]) => `<span class="chip${k === 'ptar' ? ' ptar' : ''}">${esc(t)}<button type="button" data-act="quitar" data-val="${k}" aria-label="Quitar filtro">✕</button></span>`).join('')
     : '<span class="t">Sin filtros activos: se muestran todos los contratos válidos.</span>';
