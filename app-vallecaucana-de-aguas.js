@@ -20,6 +20,8 @@ const EXCLUIDOS = /^(borrador|cancelado)$/i;
 const PALETA = ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s4)', 'var(--s5)', 'var(--s6)', 'var(--s7)', 'var(--s8)'];
 const GRIS = 'var(--s-otros)';
 const POR_PAG = 50;
+const SISMO = '2026-08-10';   // sismo en Cali y el Valle del Cauca: corte para comparar la contratación antes y desde esa fecha
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
 /* ---------- motor de categorización (reemplazable desde el panel de metodología) ---------- */
 const MOTOR = { detalle: categorizarDetalle, ptar: esPTAR, reglas: REGLAS, otros: OTROS };
@@ -48,6 +50,7 @@ function prepararDatos() {
   }));
   for (const c of CONTRATOS) {                                // texto íntegro: el más largo entre objeto y descripción
     if ((c.descripcion || '').length > c.objeto.length) c.objeto = c.descripcion;
+    c.periodo = c.firma ? (c.firma >= SISMO ? 'despues' : 'antes') : 'sf';
     c.recortado = c.objeto.length >= 499;                     // SECOP entrega el objeto cortado a 500 caracteres
   }
   const anios = CONTRATOS.map((c) => c.anio).filter(Boolean);
@@ -113,7 +116,7 @@ function construirColores() {
 let S = {};
 const estadoInicial = () => ({
   q: '', yMin: Y0, yMax: Y1, cat: '', estado: '', tipo: '', modalidad: '',
-  vMin: null, vMax: null, ptar: false, sinOut: false, metrica: 'valor',
+  vMin: null, vMax: null, ptar: false, sinOut: false, metrica: 'valor', periodo: '',
   sort: { k: 'firma', dir: -1 }, pag: 1, imprimirTodo: false,
 });
 
@@ -125,6 +128,7 @@ function pasa(c, omitir = []) {
   if (!o('estado') && S.estado && c.estadoN !== S.estado) return false;
   if (!o('tipo') && S.tipo && c.tipo !== S.tipo) return false;
   if (!o('modalidad') && S.modalidad && c.modalidad !== S.modalidad) return false;
+  if (!o('periodo') && S.periodo && c.periodo !== S.periodo) return false;
   if (!o('anio')) {
     const completo = S.yMin === Y0 && S.yMax === Y1;
     if (c.anio == null) { if (!completo) return false; }
@@ -299,7 +303,7 @@ function renderCabecera() {
     <span><b>${fmtN.format(CONTRATOS.length)}</b> contratos</span>
     <span>Firma: <b>${fmtFecha(fechas[0])}</b> a <b>${fmtFecha(fechas[fechas.length - 1])}</b></span>
     <span>Consulta: ${fmtFecha(DATOS_META.consulta)}</span>`;
-  $('#pie').innerHTML = `Fuente: ${esc(DATOS_META.fuente)}, consultada el ${fmtFecha(DATOS_META.consulta)}. Se excluyen los contratos en estado Borrador (${EXCLUIDOS_N.borrador}) y Cancelado (${EXCLUIDOS_N.cancelado}). La métrica principal es el valor del contrato (<code>valor_del_contrato</code>); el valor pagado casi siempre es 0 en SECOP II y no se usa.`;
+  $('#pie').innerHTML = `Fuente: ${esc(DATOS_META.fuente)}, consultada el ${fmtFecha(DATOS_META.consulta)}. Solo contratos con fecha de firma desde ${fmtFecha(DATOS_META.desde || '2021-01-01')}. Se excluyen por regla los estados Borrador (${EXCLUIDOS_N.borrador}) y Cancelado (${EXCLUIDOS_N.cancelado}); como no tienen fecha de firma, ya quedan fuera al filtrar por periodo. La métrica principal es el valor del contrato (<code>valor_del_contrato</code>); el valor pagado casi siempre es 0 en SECOP II y no se usa.`;
 }
 
 function renderAlertas() {
@@ -310,18 +314,98 @@ function renderAlertas() {
   const genericos = CONTRATOS.filter((c) => /^(ver objeto|no definido|sin descripcion|)$/i.test(normalizar(c.objeto).trim())).length;
   const abierto = el.hasAttribute('open') || !el.dataset.init;
   el.dataset.init = '1';
-  el.innerHTML = `<summary>⚠ Alertas de calidad de datos (${ALERTAS.length} contratos con valor atípico)</summary>
+  el.innerHTML = `<summary>⚠ Alertas de calidad de datos (${ALERTAS.length ? ALERTAS.length + (ALERTAS.length === 1 ? ' contrato con valor atípico' : ' contratos con valor atípico') : 'sin valores atípicos en este periodo'})</summary>
     <ul>
       ${ALERTAS.map((c) => `<li><b>${c.alerta.nivel === 'alta' ? 'Sospecha ALTA' : c.alerta.nivel === 'verificado' ? 'Atípico verificado' : 'Atípico'}:</b> ${esc(c.ref)} · ${esc(c.proveedor)} · <b>${fmtCOP.format(c.valor)}</b> (${esc(c.estadoN)}, ${c.anio ?? 's/f'}).<br>${esc(c.alerta.motivo)}
         <br><span class="nota" style="color:inherit">Objeto: ${esc(c.objeto)}</span>
         ${c.url ? ` <a href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">Ver en SECOP 🔗</a>` : ''}</li>`).join('')}
-      <li><b>No se corrige ningún dato sin confirmación.</b> La única excepción es el valor verificado en SECOP indicado arriba (ajuste documentado en <code>actualizar-datos-vallecaucana-de-aguas.mjs</code>). Las demás sospechas solo se señalan.</li>
-      <li>${fmtN.format(cero.length)} contratos con valor $0 (${fmtN.format(ceroConv)} son convenios/interadministrativos, que se suscriben sin valor).</li>
-      <li>${fmtN.format(sinFecha)} ${sinFecha === 1 ? 'contrato' : 'contratos'} sin fecha de firma (aún no firmados); se muestran con año «s/f» y solo cuentan cuando el rango de años está completo.</li>
-      <li>${fmtN.format(genericos)} ${genericos === 1 ? 'contrato' : 'contratos'} con objeto genérico («No definido», «Sin descripción»): se clasifican con la justificación, el tipo y el segmento UNSPSC.</li>
+      ${ALERTAS.length ? '' : '<li>No se detectaron valores atípicos por error de captura en el periodo cargado.</li>'}
+      <li><b>No se corrige ningún dato sin confirmación.</b> ${CONTRATOS.some((c) => c.ajuste) ? 'La única excepción es el valor verificado en SECOP indicado arriba (ajuste documentado en <code>actualizar-datos-vallecaucana-de-aguas.mjs</code>). ' : ''}Las sospechas solo se señalan.</li>
+      <li>${fmtN.format(cero.length)} ${cero.length === 1 ? 'contrato' : 'contratos'} con valor $0 (${fmtN.format(ceroConv)} ${ceroConv === 1 ? 'es convenio/interadministrativo' : 'son convenios/interadministrativos'}, que se suscriben sin valor).</li>
+      ${sinFecha ? `<li>${fmtN.format(sinFecha)} ${sinFecha === 1 ? 'contrato' : 'contratos'} sin fecha de firma (aún no firmados); se muestran con año «s/f» y solo cuentan cuando el rango de años está completo.</li>` : ''}
+      ${genericos ? `<li>${fmtN.format(genericos)} ${genericos === 1 ? 'contrato' : 'contratos'} con objeto genérico («No definido», «Sin descripción»): se clasifican con la justificación, el tipo y el segmento UNSPSC.</li>` : ''}
     </ul>
-    <label><input type="checkbox" id="f-sinout" ${S.sinOut ? 'checked' : ''}> Excluir de todos los cálculos el contrato atípico de mayor valor (solo visualización; no altera los datos)</label>`;
+    ${ALERTAS.some((c) => ['alta', 'verificado'].includes(c.alerta.nivel)) ? `<label><input type="checkbox" id="f-sinout" ${S.sinOut ? 'checked' : ''}> Excluir de todos los cálculos el contrato atípico de mayor valor (solo visualización; no altera los datos)</label>` : ''}`;
   if (abierto) el.setAttribute('open', '');
+}
+
+/* ---------- antes y después del sismo (10 de agosto de 2026) ---------- */
+const diasEntre = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5);
+const sumar = (l, f) => l.reduce((s, c) => s + f(c), 0);
+
+function resumenPeriodo(lista, dias) {
+  const n = lista.length, valor = sumar(lista, (c) => c.valor), P = lista.filter((c) => c.ptar);
+  const meses = dias > 0 ? dias / 30.44 : 0;
+  return { n, valor, prom: n ? valor / n : 0, nP: P.length, vP: sumar(P, (c) => c.valor), meses, nMes: meses ? n / meses : 0, vMes: meses ? valor / meses : 0 };
+}
+
+function renderSismo() {
+  const lista = filtrar(['periodo']);
+  const fechas = CONTRATOS.map((c) => c.firma).filter(Boolean).sort();
+  const minF = fechas[0], maxF = fechas[fechas.length - 1];
+  const ini = `${S.yMin}-01-01` > minF ? `${S.yMin}-01-01` : minF;                // inicio efectivo del rango visible
+  const fin = `${S.yMax}-12-31` < maxF ? `${S.yMax}-12-31` : maxF;                // fin efectivo
+  const A = resumenPeriodo(lista.filter((c) => c.periodo === 'antes'), diasEntre(ini, SISMO));
+  const D = resumenPeriodo(lista.filter((c) => c.periodo === 'despues'), diasEntre(SISMO, fin) + 1);
+
+  const tarjeta = (clave, titulo, rango, R, color) => `<button type="button" class="per${S.periodo === clave ? ' sel' : ''}" style="border-left-color:${color}" data-act="periodo" data-val="${clave}"
+      data-tip="${esc('Clic para filtrar: ' + titulo)}">
+      <span class="per-t">${titulo} <small>${rango}${R.meses ? ' · ' + R.meses.toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' meses' : ''}</small></span>
+      <span class="pg">
+        <span><b>${fmtN.format(R.n)}</b><i>contratos</i></span>
+        <span><b>${fmtM(R.valor)}</b><i>valor total</i></span>
+        <span><b>${fmtM(R.prom)}</b><i>valor promedio</i></span>
+        <span><b>${R.meses ? R.nMes.toLocaleString('es-CO', { maximumFractionDigits: 1 }) : '—'}</b><i>contratos / mes</i></span>
+        <span><b>${R.meses ? fmtM(R.vMes) : '—'}</b><i>valor / mes</i></span>
+        <span><b>${fmtN.format(R.nP)} · ${fmtM(R.vP)}</b><i>PTAR</i></span>
+      </span></button>`;
+
+  const veces = (a, b) => (b > 0 ? (a / b).toLocaleString('es-CO', { maximumFractionDigits: 1 }) + '×' : '—');
+  const comp = A.meses && D.meses && A.n
+    ? `Ritmo desde el sismo frente al previo: <b>${veces(D.nMes, A.nMes)}</b> en contratos por mes y <b>${veces(D.vMes, A.vMes)}</b> en valor por mes. La ventana posterior es corta (${fmtN.format(Math.round(D.meses * 30.44))} días hasta la última firma, ${fmtFecha(fin)}); léelo como indicio, no como tendencia.`
+    : 'Sin datos suficientes en ambos períodos con los filtros actuales.';
+
+  // Serie mensual apilada: antes (abajo) + desde el sismo (arriba)
+  const meses = [];
+  const [y0, m0] = minF.split('-').map(Number), [y1, m1] = maxF.split('-').map(Number);
+  for (let y = y0, m = m0; y < y1 || (y === y1 && m <= m1); m === 12 ? (y++, m = 1) : m++) meses.push({ k: `${y}-${String(m).padStart(2, '0')}`, y, m, a: 0, d: 0, na: 0, nd: 0 });
+  const idx = new Map(meses.map((x, i) => [x.k, i]));
+  for (const c of lista) {
+    if (!c.firma) continue;
+    const x = meses[idx.get(c.firma.slice(0, 7))]; if (!x) continue;
+    if (c.periodo === 'antes') { x.a += medida(c); x.na++; } else { x.d += medida(c); x.nd++; }
+  }
+  const W = 760, H = 220, mL = 52, mR = 8, mT = 22, mB = 26;
+  const max = Math.max(1, ...meses.map((x) => x.a + x.d));
+  const bw = (W - mL - mR) / meses.length, y = (v) => mT + (H - mT - mB) * (1 - v / max);
+  const fm = (v) => (S.metrica === 'valor' ? fmtN.format(Math.round(v / 1e6)) + ' M' : fmtN.format(Math.round(v)));
+  const grid = [0, 0.5, 1].map((t) => `<line x1="${mL}" x2="${W - mR}" y1="${y(max * t)}" y2="${y(max * t)}" stroke="var(--grid)"/><text class="ax" x="${mL - 6}" y="${y(max * t) + 3}" text-anchor="end">${fm(max * t)}</text>`).join('');
+  const barrasSvg = meses.map((x, i) => {
+    const bx = mL + i * bw + bw * 0.15, w = bw * 0.7, ha = (H - mT - mB) * (x.a / max), hd = (H - mT - mB) * (x.d / max);
+    const base = H - mB;
+    const tipTxt = `${MESES[x.m - 1]} ${x.y}\nAntes del sismo: ${S.metrica === 'valor' ? fmtCOP.format(x.a) : x.a} (${x.na} contr.)\nDesde el sismo: ${S.metrica === 'valor' ? fmtCOP.format(x.d) : x.d} (${x.nd} contr.)`;
+    return `<g data-tip="${esc(tipTxt)}"><rect x="${mL + i * bw}" y="${mT}" width="${bw}" height="${H - mT - mB}" fill="transparent"/>
+      ${ha > 0 ? `<rect x="${bx}" y="${base - ha}" width="${w}" height="${ha}" rx="2" fill="var(--s1)"/>` : ''}
+      ${hd > 0 ? `<rect x="${bx}" y="${base - ha - hd - (ha > 0 ? 2 : 0)}" width="${w}" height="${hd}" rx="2" fill="var(--s7)"/>` : ''}</g>`;
+  }).join('');
+  const etiquetas = meses.map((x, i) => (x.m % 3 === 1 ? `<text class="ax" x="${mL + (i + 0.5) * bw}" y="${H - 8}" text-anchor="middle">${MESES[x.m - 1]} ${String(x.y).slice(2)}</text>` : '')).join('');
+  const iSismo = idx.get(SISMO.slice(0, 7));
+  const xs = iSismo != null ? mL + (iSismo + (Number(SISMO.slice(8)) - 1) / 31) * bw : null;
+  const marca = xs != null ? `<line x1="${xs}" x2="${xs}" y1="${mT - 6}" y2="${H - mB}" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="4 3"/><text class="ax" x="${xs - 5}" y="${mT - 8}" text-anchor="end" style="font-weight:700;fill:var(--ink)">Sismo · 10-ago-2026</text>` : '';
+
+  $('#sismo-panel').innerHTML = `
+    <div class="card-h"><h2>Antes y después del sismo <small>10 de agosto de 2026 · Cali y Valle del Cauca</small></h2></div>
+    <div class="sismo-grid">
+      <div class="per-col">
+        ${tarjeta('antes', 'Antes del sismo', `${fmtFecha(ini)} – 09/08/2026`, A, 'var(--s1)')}
+        ${tarjeta('despues', 'Desde el sismo', `10/08/2026 – ${fmtFecha(fin)}`, D, 'var(--s7)')}
+        <p class="nota">${comp}</p>
+      </div>
+      <div>
+        <div class="leyenda"><span><i style="background:var(--s1)"></i>Firmados antes del sismo</span><span><i style="background:var(--s7)"></i>Firmados desde el sismo</span><span class="nota">Por mes de firma · ${S.metrica === 'valor' ? 'millones de COP (M)' : 'nº de contratos'}</span></div>
+        <svg viewBox="0 0 ${W} ${H}" class="serie" role="img" aria-label="Contratación mensual antes y después del sismo">${grid}${barrasSvg}${etiquetas}${marca}</svg>
+      </div>
+    </div>`;
 }
 
 /* ---------- tabla ---------- */
@@ -383,6 +467,7 @@ function renderChips() {
   if (S.modalidad) ch.push(['modalidad', 'Modalidad: ' + S.modalidad]);
   if (S.vMin != null) ch.push(['vMin', 'Valor ≥ ' + fmtCOP.format(S.vMin)]);
   if (S.vMax != null) ch.push(['vMax', 'Valor ≤ ' + fmtCOP.format(S.vMax)]);
+  if (S.periodo) ch.push(['periodo', S.periodo === 'antes' ? 'Antes del sismo (< 10-ago-2026)' : 'Desde el sismo (≥ 10-ago-2026)']);
   if (S.ptar) ch.push(['ptar', 'Solo PTAR']);
   if (S.sinOut) ch.push(['sinOut', 'Sin el contrato atípico de mayor valor']);
   $('#chips').innerHTML = ch.length
@@ -409,6 +494,7 @@ function sincronizarControles() {
   if (libre('#f-q')) $('#f-q').value = S.q;
   $('#f-cat').value = S.cat; $('#f-estado').value = S.estado; $('#f-tipo').value = S.tipo; $('#f-modalidad').value = S.modalidad;
   $('#f-ymin').value = S.yMin; $('#f-ymax').value = S.yMax;
+  $('#f-periodo').value = S.periodo;
   const span = Math.max(1, Y1 - Y0);
   $('#f-relleno').style.left = ((S.yMin - Y0) / span) * 100 + '%';
   $('#f-relleno').style.width = ((S.yMax - S.yMin) / span) * 100 + '%';
@@ -426,6 +512,7 @@ function render() {
   sincronizarControles();
   renderPTAR();
   renderKPIs(f);
+  renderSismo();
   renderChips();
   renderGraficos();
   renderTabla(f);
@@ -455,6 +542,7 @@ document.addEventListener('click', (e) => {
       if (S.yMin === y && S.yMax === y) { S.yMin = Y0; S.yMax = Y1; } else { S.yMin = S.yMax = y; }
       S.pag = 1; render(); break;
     }
+    case 'periodo': toggle('periodo', v); break;
     case 'prov': S.q = S.q === v ? '' : v; S.pag = 1; render(); break;
     case 'ordenar': S.sort = { k: v, dir: S.sort.k === v ? -S.sort.dir : (v === 'valor' || v === 'firma' || v === 'anio' ? -1 : 1) }; S.pag = 1; render(); break;
     case 'pag': S.pag = +v; renderTabla(filtrar()); $('#tabla').scrollIntoView({ block: 'start', behavior: 'smooth' }); break;
@@ -468,6 +556,7 @@ document.addEventListener('change', (e) => {
   else if (id === 'f-tipo') { S.tipo = e.target.value; }
   else if (id === 'f-modalidad') { S.modalidad = e.target.value; }
   else if (id === 'f-ptar') { S.ptar = e.target.checked; }
+  else if (id === 'f-periodo') { S.periodo = e.target.value; }
   else if (id === 'f-sinout') { S.sinOut = e.target.checked; }
   else return;
   S.pag = 1; render();
@@ -493,7 +582,7 @@ function exportarCSV() {
     ['Referencia', (c) => c.ref], ['Id contrato', (c) => c.id], ['Categoría', (c) => c.cat], ['Relacionado con PTAR', (c) => (c.ptar ? 'Sí' : 'No')],
     ['Objeto', (c) => c.objeto], ['Proveedor', (c) => c.proveedor], ['Tipo documento', (c) => c.tipodoc], ['Documento proveedor', (c) => c.doc],
     ['PYME', (c) => (c.pyme ? 'Sí' : 'No')], ['Valor del contrato (COP)', (c) => c.valor], ['Estado', (c) => c.estadoN], ['Tipo de contrato', (c) => c.tipo],
-    ['Modalidad', (c) => c.modalidad], ['Año', (c) => c.anio ?? ''], ['Fecha de firma', (c) => c.firma], ['Inicio', (c) => c.inicio], ['Fin', (c) => c.fin],
+    ['Modalidad', (c) => c.modalidad], ['Período respecto al sismo', (c) => (c.periodo === 'antes' ? 'Antes del sismo (10-ago-2026)' : c.periodo === 'despues' ? 'Desde el sismo' : 'Sin fecha')], ['Año', (c) => c.anio ?? ''], ['Fecha de firma', (c) => c.firma], ['Inicio', (c) => c.inicio], ['Fin', (c) => c.fin],
     ['Supervisor', (c) => c.supervisor], ['URL SECOP', (c) => c.url], ['Alerta de valor', (c) => (c.alerta ? c.alerta.motivo : '')],
   ];
   const cel = (v) => { const s = String(v ?? ''); return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };

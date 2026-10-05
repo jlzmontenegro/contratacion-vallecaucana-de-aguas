@@ -4,7 +4,8 @@
 import { writeFileSync } from 'node:fs';
 
 const BASE = 'https://www.datos.gov.co/resource/jbjy-vk9h.json';
-const WHERE = "caseless_one_of(nombre_entidad,'VALLECAUCANA DE AGUAS S.A. E.S.P') OR nit_entidad IN ('900333452')";
+const DESDE = '2024-01-01';   // solo contratos firmados desde esta fecha
+const WHERE = `(caseless_one_of(nombre_entidad,'VALLECAUCANA DE AGUAS S.A. E.S.P') OR nit_entidad IN ('900333452')) AND fecha_de_firma >= '${DESDE}T00:00:00'`;
 const ORDER = 'fecha_de_firma DESC NULL LAST';
 const PAGE = 1000;
 
@@ -67,6 +68,7 @@ const meta = {
   nit: '900333452',
   fuente: 'SECOP II · datos.gov.co (jbjy-vk9h)',
   fuenteUrl: 'https://www.datos.gov.co/d/jbjy-vk9h',
+  desde: DESDE,
   consulta: new Date().toISOString().slice(0, 10),
   filasApi: filas.length,
 };

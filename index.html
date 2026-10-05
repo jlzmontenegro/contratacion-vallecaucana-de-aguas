@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Contratación Vallecaucana de Aguas</title>
 <meta name="description" content="Dashboard interactivo de la contratación de Vallecaucana de Aguas S.A. E.S.P. (SECOP II), con énfasis en plantas de tratamiento de aguas residuales (PTAR).">
-<link rel="stylesheet" href="estilos-vallecaucana-de-aguas.css?v=4">
+<link rel="stylesheet" href="estilos-vallecaucana-de-aguas.css?v=5">
 </head>
 <body>
 <div class="wrap">
@@ -45,6 +45,7 @@
     <div class="fld f-sel"><label for="f-estado">Estado</label><select id="f-estado"></select></div>
     <div class="fld f-sel"><label for="f-tipo">Tipo de contrato</label><select id="f-tipo"></select></div>
     <div class="fld f-sel"><label for="f-modalidad">Modalidad</label><select id="f-modalidad"></select></div>
+    <div class="fld f-sel"><label for="f-periodo">Período (sismo 10-ago-2026)</label><select id="f-periodo"><option value="">Todo el período</option><option value="antes">Antes del sismo</option><option value="despues">Desde el sismo</option></select></div>
     <div class="fld f-val"><label for="f-vmin">Valor mínimo (COP)</label><input id="f-vmin" type="text" inputmode="numeric" placeholder="0"></div>
     <div class="fld f-val"><label for="f-vmax">Valor máximo (COP)</label><input id="f-vmax" type="text" inputmode="numeric" placeholder="sin tope"></div>
     <div class="f-btns">
@@ -61,6 +62,9 @@
   </section>
 
   <div class="chips" id="chips" aria-live="polite"></div>
+
+  <!-- Antes y después del sismo -->
+  <section class="card sismo" id="sismo-panel" aria-label="Antes y después del sismo"></section>
 
   <!-- Gráficos -->
   <section class="grid" aria-label="Gráficos">
@@ -106,8 +110,8 @@
 </div>
 <div id="tip" role="tooltip"></div>
 
-<script src="datos-vallecaucana-de-aguas.js?v=4"></script>
-<script src="categorizar-vallecaucana-de-aguas.js?v=4"></script>
-<script src="app-vallecaucana-de-aguas.js?v=4"></script>
+<script src="datos-vallecaucana-de-aguas.js?v=5"></script>
+<script src="categorizar-vallecaucana-de-aguas.js?v=5"></script>
+<script src="app-vallecaucana-de-aguas.js?v=5"></script>
 </body>
 </html>

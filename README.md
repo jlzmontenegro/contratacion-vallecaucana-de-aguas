@@ -25,6 +25,7 @@ Requiere Node 18+. Regenera `datos-vallecaucana-de-aguas.js`.
 ## Criterios
 
 - Métrica principal: `valor_del_contrato` (el valor pagado casi siempre es 0 en SECOP II).
-- Se excluyen los estados **Borrador** y **Cancelado**.
+- Solo contratos con fecha de firma **desde el 01/01/2024** (se cambia con `DESDE` en el script de actualización). Se excluyen los estados **Borrador** y **Cancelado**.
+- Corte por el **sismo del 10 de agosto de 2026**: el dashboard compara los contratos firmados antes y desde esa fecha (tarjetas, gráfico mensual y filtro de período).
 - **PTAR** es una marca transversal (`esPTAR()`), no una categoría: un contrato puede ser «Obras» y PTAR a la vez. En contratos «paquete» (alcantarillado + PTAR) el valor es el del contrato completo.
 - Los valores atípicos se **señalan** en el dashboard (sección de alertas) y no se corrigen sin confirmación. Único ajuste: el contrato `2000.13.05.003-2022` usa el valor verificado en SECOP ($45.584.659.952; la API reporta $45.534.873.888). Ver `AJUSTES_VERIFICADOS` en el script de actualización.
