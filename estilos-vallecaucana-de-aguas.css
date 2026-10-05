@@ -77,7 +77,9 @@ button { cursor: pointer; }
 .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); min-width: 0; }
 .kpi .lbl { color: var(--ink-2); font-size: 12px; }
 .kpi .val { font-size: 22px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.kpi .val.sm { font-size: 17px; }
+.kpi .val.sm { font-size: clamp(13px, 1.45vw, 17px); white-space: nowrap; overflow-wrap: normal; }
+@media (max-width: 1000px) { .kpi .val.sm { font-size: 17px; } }
+@media (max-width: 400px) { .kpi .val.sm { font-size: 14px; } }
 .kpi .sub { color: var(--ink-3); font-size: 11.5px; }
 
 /* Alertas */
